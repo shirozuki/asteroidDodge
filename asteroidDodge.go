@@ -148,21 +148,21 @@ func run() {
 		
 		fpsCount++
 		
-		if fpsCount < 3600 {
+		if fpsCount == 0 {
 			fmt.Println("Level: 1")
 		}
 
-		if fpsCount = 3600 {
+		if fpsCount == 3600 {
 			fmt.Println("Level: 2")
 			level++
 		}
 
-		if fpsCount = 7200 {
+		if fpsCount == 7200 {
 			fmt.Println("Level: 3")
 			level++
 		}
 
-		if fpsCount = 10800 {
+		if fpsCount == 10800 {
 			fmt.Println("Level: 4")
 			level++
 		}
