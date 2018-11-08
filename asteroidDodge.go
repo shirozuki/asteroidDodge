@@ -179,7 +179,7 @@ func run() {
 		var astMatArr [20]pixel.Matrix
 
 		for i := 0; i < numOfAsts; i++ {
-			astPosArr[i].Y -= astSpdArr[i] 
+			astPosArr[i].Y -= astSpdArr[i]
 		}
 
 		plyMat = pixel.IM
@@ -199,6 +199,7 @@ func run() {
 
 		win.Update()
 
+		// SPRÓBOWAĆ ZMIENIĆ SPRITE?
 		for i := 0; i < numOfAsts; i++ {
 			if astPosArr[i].Y < 0 {
 				astPosArr[i].X = float64(random(20, 780))
