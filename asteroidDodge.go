@@ -1,6 +1,7 @@
 ﻿package main
 
 import (
+	"fmt"
 	"image"
 	_ "image/png"
 	"math/rand"
@@ -74,7 +75,7 @@ func run() {
 	win.Clear(colornames.Black)
 
 	// Zmienne sterujące przebiegiem gry
-	var currLvl, fpsCount, timer, numOfAsts int
+	var currLvl, fpsCount int
 	//var xAstSpd, yAstSpd float64
 	//var xPlySpd, yPlySpd float64
 	//var chngAstSpdVec pixel.Vec
@@ -154,22 +155,22 @@ func run() {
 
 		if fpsCount == 3600 {
 			fmt.Println("Level: 2")
-			level++
+			currLvl++
 		}
 
 		if fpsCount == 7200 {
 			fmt.Println("Level: 3")
-			level++
+			currLvl++
 		}
 
 		if fpsCount == 10800 {
 			fmt.Println("Level: 4")
-			level++
+			currLvl++
 		}
 
-		if fpsCount = 14400 {
+		if fpsCount == 14400 {
 			fmt.Println("Level: 5")
-			level++
+			currLvl++
 		}
 	}
 
