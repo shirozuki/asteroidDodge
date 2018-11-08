@@ -75,13 +75,14 @@ func run() {
 	win.Clear(colornames.Black)
 
 	// Zmienne sterujące przebiegiem gry
-	var currLvl, fpsCount int
+	var currLvl, fpsCount, numOfAsts, astMinSpd, astMaxSpd int
 	//var xAstSpd, yAstSpd float64
 	//var xPlySpd, yPlySpd float64
 	//var chngAstSpdVec pixel.Vec
 	//var chngAstXPosVec, changeAstYPosVec pixel.Vec
 	var plyPos pixel.Vec
 	var astPosArr [20]pixel.Vec
+	var astSpdArr [20]float64
 	//var chngPlyXPosVec, changePlyYPosVec pixel.Vec
 	//var astImgsMap map[int]string // = mapPngFiles()
 
@@ -118,16 +119,68 @@ func run() {
 	plyPos.X = 400
 	plyPos.Y = 200
 
-	for i := 0; i < 5; i++ {
-		astPosArr[i].X = float64(random(100, 500))
-		astPosArr[i].Y = float64(random(100, 500))
+	for i := 0; i < 20; i++ {
+		astPosArr[i].X = float64(random(20, 780))
+		astPosArr[i].Y = float64(random(560, 580))
+	}
+
+	for i := 0; i < 20; i++ {
+		astSpdArr[i] = float64(random(15, 30)) / 10
+		fmt.Println(astSpdArr[i])
 	}
 
 	for !win.Closed() {
 		win.Clear(colornames.Black)
 
+		if currLvl == 0 {
+			numOfAsts = 4
+			astMinSpd = 15
+			astMaxSpd = 30
+		} else if currLvl == 1 {
+			numOfAsts = 5
+			astMinSpd = 20
+			astMaxSpd = 45
+		} else if currLvl == 2 {
+			numOfAsts = 6
+			astMinSpd = 35
+			astMaxSpd = 60
+		} else if currLvl == 3 {
+			numOfAsts = 8
+			astMinSpd = 40
+			astMaxSpd = 75
+		} else if currLvl == 4 {
+			numOfAsts = 10
+			astMinSpd = 50
+			astMaxSpd = 90
+		}
+
+		if win.Pressed(pixelgl.KeyRight) {
+			if plyPos.X < 780 {
+				plyPos.X += 3
+			}
+		}
+		if win.Pressed(pixelgl.KeyLeft) {
+			if plyPos.X > 20 {
+				plyPos.X -= 3
+			}
+		}
+		if win.Pressed(pixelgl.KeyUp) {
+			if plyPos.Y < 580 {
+				plyPos.Y += 3
+			}
+		}
+		if win.Pressed(pixelgl.KeyDown) {
+			if plyPos.Y > 20 {
+				plyPos.Y -= 3
+			}
+		}
+
 		var plyMat pixel.Matrix
 		var astMatArr [20]pixel.Matrix
+
+		for i := 0; i < numOfAsts; i++ {
+			astPosArr[i].Y -= astSpdArr[i] 
+		}
 
 		plyMat = pixel.IM
 		for i := 0; i < 20; i++ {
@@ -135,20 +188,30 @@ func run() {
 		}
 
 		plyMat = plyMat.Moved(plyPos)
-		for i := 0; i < 5; i++ {
+		for i := 0; i < numOfAsts; i++ {
 			astMatArr[i] = astMatArr[i].Moved(astPosArr[i])
 		}
 
 		plySpr.Draw(win, plyMat)
-		for i := 0; i < 5; i++ {
+		for i := 0; i < numOfAsts; i++ {
 			astSprArr[i].Draw(win, astMatArr[i])
 		}
 
 		win.Update()
 
-		
+		for i := 0; i < numOfAsts; i++ {
+			if astPosArr[i].Y < 0 {
+				astPosArr[i].X = float64(random(20, 780))
+				astPosArr[i].Y = float64(random(650, 800))
+				//astSpdArr[i] = float64(random(astMaxSpd-15, astMaxSpd)) / 10
+				astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
+			}
+		}
+
+		//fmt.Println(astPosArr[1])
+		//fmt.Println("frame: ", fpsCount)
 		fpsCount++
-		
+
 		if fpsCount == 0 {
 			fmt.Println("Level: 1")
 		}
