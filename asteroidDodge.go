@@ -56,6 +56,12 @@ func mapPngFiles() map[int]string {
 	return asteroidImgsName
 }
 
+func gameOver() {
+	fmt.Println("Game Over")
+	time.Sleep(5000)
+	return
+}
+
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Asteroids!",
@@ -75,12 +81,14 @@ func run() {
 	win.Clear(colornames.Black)
 
 	// Zmienne sterujące przebiegiem gry
-	var currLvl, fpsCount, numOfAsts, astMinSpd, astMaxSpd int
+	var currLvl, fpsCount, numOfAsts, astMinSpd, astMaxSpd, gunTimeout int
+	var misLaunch bool
 	//var xAstSpd, yAstSpd float64
 	//var xPlySpd, yPlySpd float64
 	//var chngAstSpdVec pixel.Vec
 	//var chngAstXPosVec, changeAstYPosVec pixel.Vec
 	var plyPos pixel.Vec
+	var misPos pixel.Vec
 	var astPosArr [20]pixel.Vec
 	var astSpdArr [20]float64
 	//var chngPlyXPosVec, changePlyYPosVec pixel.Vec
@@ -95,6 +103,8 @@ func run() {
 
 	var plyPic pixel.Picture
 	var plySpr *pixel.Sprite
+	var misPic pixel.Picture
+	var misSpr *pixel.Sprite
 	var astPicArr [20]pixel.Picture
 	var astSprArr [20]*pixel.Sprite
 	//asteroidsMatrix := [20]pixel.IM
@@ -103,8 +113,13 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
-
 	plySpr = pixel.NewSprite(plyPic, plyPic.Bounds())
+
+	misPic, err = loadPicture("gfx/missile2.png")
+	if err != nil {
+		panic(err)
+	}
+	misSpr = pixel.NewSprite(misPic, misPic.Bounds())
 
 	for i := 0; i < 20; i++ {
 		picNum := random(1, 20)
@@ -119,13 +134,17 @@ func run() {
 	plyPos.X = 400
 	plyPos.Y = 200
 
+	misPos.X = 1000
+	misPos.Y = 1000
+	misLaunch = false
+
 	for i := 0; i < 20; i++ {
 		astPosArr[i].X = float64(random(20, 780))
-		astPosArr[i].Y = float64(random(560, 580))
+		astPosArr[i].Y = float64(random(650, 800))
 	}
 
 	for i := 0; i < 20; i++ {
-		astSpdArr[i] = float64(random(15, 30)) / 10
+		astSpdArr[i] = float64(random(15, 30)) / 10 // 15, 30
 		fmt.Println(astSpdArr[i])
 	}
 
@@ -133,25 +152,25 @@ func run() {
 		win.Clear(colornames.Black)
 
 		if currLvl == 0 {
-			numOfAsts = 4
-			astMinSpd = 15
-			astMaxSpd = 30
+			numOfAsts = 3 //1
+			astMinSpd = 5
+			astMaxSpd = 10
 		} else if currLvl == 1 {
-			numOfAsts = 5
-			astMinSpd = 20
-			astMaxSpd = 45
+			numOfAsts = 5  //5
+			astMinSpd = 20 //20
+			astMaxSpd = 45 //45
 		} else if currLvl == 2 {
-			numOfAsts = 6
-			astMinSpd = 35
-			astMaxSpd = 60
+			numOfAsts = 6  //6
+			astMinSpd = 35 //35
+			astMaxSpd = 60 //60
 		} else if currLvl == 3 {
-			numOfAsts = 8
-			astMinSpd = 40
-			astMaxSpd = 75
+			numOfAsts = 8  //8
+			astMinSpd = 40 //40
+			astMaxSpd = 75 //75
 		} else if currLvl == 4 {
-			numOfAsts = 10
-			astMinSpd = 50
-			astMaxSpd = 90
+			numOfAsts = 10 //10
+			astMinSpd = 50 //50
+			astMaxSpd = 90 //90
 		}
 
 		if win.Pressed(pixelgl.KeyRight) {
@@ -174,8 +193,24 @@ func run() {
 				plyPos.Y -= 3
 			}
 		}
+		if win.Pressed(pixelgl.KeySpace) {
+			if gunTimeout <= 0 {
+				misLaunch = true
+				misPos.X = plyPos.X / 2
+				misPos.Y = plyPos.Y / 2
+				gunTimeout = 300 - 120
+
+			}
+		}
+
+		if misPos.Y > 1000 {
+			misPos.X = 1000
+			misPos.Y = 1000
+			misLaunch = false
+		}
 
 		var plyMat pixel.Matrix
+		var misMat pixel.Matrix
 		var astMatArr [20]pixel.Matrix
 
 		for i := 0; i < numOfAsts; i++ {
@@ -183,61 +218,93 @@ func run() {
 		}
 
 		plyMat = pixel.IM
+		misMat = pixel.IM
 		for i := 0; i < 20; i++ {
 			astMatArr[i] = pixel.IM
 		}
 
 		plyMat = plyMat.Moved(plyPos)
+		misMat = misMat.Moved(misPos)
 		for i := 0; i < numOfAsts; i++ {
 			astMatArr[i] = astMatArr[i].Moved(astPosArr[i])
 		}
 
+		if misLaunch == true {
+			misPos.Y += 8
+			misMat = misMat.Moved(misPos)
+		}
+
 		plySpr.Draw(win, plyMat)
+		misSpr.Draw(win, misMat)
 		for i := 0; i < numOfAsts; i++ {
 			astSprArr[i].Draw(win, astMatArr[i])
+		}
+
+		// DETEKCJA KOLIZJI
+		for i := 0; i < numOfAsts; i++ {
+			if (((astPosArr[i].X - plyPos.X) < 40) && ((astPosArr[i].X - plyPos.X) > -40)) &&
+				(((astPosArr[i].Y - plyPos.Y) < 40) && ((astPosArr[i].Y - plyPos.Y) > -40)) {
+				time.Sleep(150000)
+				win.Clear(colornames.Red)
+				win.Update()
+				time.Sleep(150000)
+				return
+			}
+		}
+
+		for i := 0; i < numOfAsts; i++ {
+			if (((astPosArr[i].X - misPos.X*2) < 40) && ((astPosArr[i].X - misPos.X*2) > -40)) &&
+				(((astPosArr[i].Y - misPos.Y*2) < 40) && ((astPosArr[i].Y - misPos.Y*2) > -40)) {
+				win.Clear(colornames.Yellow)
+				win.Update()
+				misLaunch = false
+				misPos.X = 1000
+				misPos.Y = 1000
+				astPosArr[i].X = float64(random(20, 780))
+				astPosArr[i].Y = float64(random(650, 800))
+				astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
+				fmt.Println(astSpdArr[i])
+			}
 		}
 
 		win.Update()
 
 		// SPRÓBOWAĆ ZMIENIĆ SPRITE?
 		for i := 0; i < numOfAsts; i++ {
-			if astPosArr[i].Y < 0 {
+			if astPosArr[i].Y < -20 {
 				astPosArr[i].X = float64(random(20, 780))
 				astPosArr[i].Y = float64(random(650, 800))
 				//astSpdArr[i] = float64(random(astMaxSpd-15, astMaxSpd)) / 10
 				astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
 			}
 		}
-
-		//fmt.Println(astPosArr[1])
-		//fmt.Println("frame: ", fpsCount)
 		fpsCount++
+		gunTimeout--
 
 		if fpsCount == 0 {
 			fmt.Println("Level: 1")
 		}
 
-		if fpsCount == 3600 {
+		if fpsCount == 3600 { //3600
 			fmt.Println("Level: 2")
 			currLvl++
 		}
 
-		if fpsCount == 7200 {
+		if fpsCount == 7200 { //7200
 			fmt.Println("Level: 3")
 			currLvl++
 		}
 
-		if fpsCount == 10800 {
+		if fpsCount == 10800 { // 10800
 			fmt.Println("Level: 4")
 			currLvl++
 		}
 
-		if fpsCount == 14400 {
+		if fpsCount == 14400 { // 14400
 			fmt.Println("Level: 5")
 			currLvl++
 		}
 	}
-
 }
 
 func main() {
