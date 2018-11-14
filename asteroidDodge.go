@@ -10,7 +10,9 @@ import (
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
+	"github.com/faiface/pixel/text"
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/basicfont"
 )
 
 func loadPicture(path string) (pixel.Picture, error) {
@@ -81,8 +83,8 @@ func run() {
 	win.Clear(colornames.Black)
 
 	// Zmienne sterujące przebiegiem gry
-	var currLvl, fpsCount, numOfAsts, astMinSpd, astMaxSpd, gunTimeout int
-	var misLaunch bool
+	var currLvl, fpsCount, numOfAsts, astMinSpd, astMaxSpd, gunTimeout, points int
+	var misLaunch, gameOver bool
 	//var xAstSpd, yAstSpd float64
 	//var xPlySpd, yPlySpd float64
 	//var chngAstSpdVec pixel.Vec
@@ -94,12 +96,24 @@ func run() {
 	//var chngPlyXPosVec, changePlyYPosVec pixel.Vec
 	//var astImgsMap map[int]string // = mapPngFiles()
 
+	loadAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	loadTxt := text.New(pixel.V(670, 10), loadAtlas)
+	loadTxt.Color = colornames.Orange
+	fmt.Fprintln(loadTxt, "Działo : ")
+	ptsAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	ptsTxt := text.New(pixel.V(10, 10), ptsAtlas)
+	ptsTxt.Color = colornames.Yellow
+	fmt.Fprintln(ptsTxt, "Punkty : ", points)
+
 	astImgsMap := mapPngFiles()
 	//println(asteroidImgsMap[1])
 
 	// NIEPOTRZEBNE?
 	//var plyMat pixel.Matrix
 	//var astMatArr [20]pixel.Matrix
+
+	var titlePic pixel.Picture
+	var titleSpr *pixel.Sprite
 
 	var plyPic pixel.Picture
 	var plySpr *pixel.Sprite
@@ -108,6 +122,12 @@ func run() {
 	var astPicArr [20]pixel.Picture
 	var astSprArr [20]*pixel.Sprite
 	//asteroidsMatrix := [20]pixel.IM
+
+	titlePic, err = loadPicture("gfx/titleScreen.png")
+	if err != nil {
+		panic(err)
+	}
+	titleSpr = pixel.NewSprite(titlePic, titlePic.Bounds())
 
 	plyPic, err = loadPicture("gfx/plyShipCenter.png")
 	if err != nil {
@@ -148,161 +168,200 @@ func run() {
 		fmt.Println(astSpdArr[i])
 	}
 
-	for !win.Closed() {
-		win.Clear(colornames.Black)
+	// INTRO
+	var start bool
+	start = false
 
-		if currLvl == 0 {
-			numOfAsts = 3 //1
-			astMinSpd = 5
-			astMaxSpd = 10
-		} else if currLvl == 1 {
-			numOfAsts = 5  //5
-			astMinSpd = 20 //20
-			astMaxSpd = 45 //45
-		} else if currLvl == 2 {
-			numOfAsts = 6  //6
-			astMinSpd = 35 //35
-			astMaxSpd = 60 //60
-		} else if currLvl == 3 {
-			numOfAsts = 8  //8
-			astMinSpd = 40 //40
-			astMaxSpd = 75 //75
-		} else if currLvl == 4 {
-			numOfAsts = 10 //10
-			astMinSpd = 50 //50
-			astMaxSpd = 90 //90
-		}
-
-		if win.Pressed(pixelgl.KeyRight) {
-			if plyPos.X < 780 {
-				plyPos.X += 3
-			}
-		}
-		if win.Pressed(pixelgl.KeyLeft) {
-			if plyPos.X > 20 {
-				plyPos.X -= 3
-			}
-		}
-		if win.Pressed(pixelgl.KeyUp) {
-			if plyPos.Y < 580 {
-				plyPos.Y += 3
-			}
-		}
-		if win.Pressed(pixelgl.KeyDown) {
-			if plyPos.Y > 20 {
-				plyPos.Y -= 3
-			}
-		}
-		if win.Pressed(pixelgl.KeySpace) {
-			if gunTimeout <= 0 {
-				misLaunch = true
-				misPos.X = plyPos.X / 2
-				misPos.Y = plyPos.Y / 2
-				gunTimeout = 300 - 120
-
-			}
-		}
-
-		if misPos.Y > 1000 {
-			misPos.X = 1000
-			misPos.Y = 1000
-			misLaunch = false
-		}
-
-		var plyMat pixel.Matrix
-		var misMat pixel.Matrix
-		var astMatArr [20]pixel.Matrix
-
-		for i := 0; i < numOfAsts; i++ {
-			astPosArr[i].Y -= astSpdArr[i]
-		}
-
-		plyMat = pixel.IM
-		misMat = pixel.IM
-		for i := 0; i < 20; i++ {
-			astMatArr[i] = pixel.IM
-		}
-
-		plyMat = plyMat.Moved(plyPos)
-		misMat = misMat.Moved(misPos)
-		for i := 0; i < numOfAsts; i++ {
-			astMatArr[i] = astMatArr[i].Moved(astPosArr[i])
-		}
-
-		if misLaunch == true {
-			misPos.Y += 8
-			misMat = misMat.Moved(misPos)
-		}
-
-		plySpr.Draw(win, plyMat)
-		misSpr.Draw(win, misMat)
-		for i := 0; i < numOfAsts; i++ {
-			astSprArr[i].Draw(win, astMatArr[i])
-		}
-
-		// DETEKCJA KOLIZJI
-		for i := 0; i < numOfAsts; i++ {
-			if (((astPosArr[i].X - plyPos.X) < 40) && ((astPosArr[i].X - plyPos.X) > -40)) &&
-				(((astPosArr[i].Y - plyPos.Y) < 40) && ((astPosArr[i].Y - plyPos.Y) > -40)) {
-				time.Sleep(150000)
-				win.Clear(colornames.Red)
-				win.Update()
-				time.Sleep(150000)
-				return
-			}
-		}
-
-		for i := 0; i < numOfAsts; i++ {
-			if (((astPosArr[i].X - misPos.X*2) < 40) && ((astPosArr[i].X - misPos.X*2) > -40)) &&
-				(((astPosArr[i].Y - misPos.Y*2) < 40) && ((astPosArr[i].Y - misPos.Y*2) > -40)) {
-				win.Clear(colornames.Yellow)
-				win.Update()
-				misLaunch = false
-				misPos.X = 1000
-				misPos.Y = 1000
-				astPosArr[i].X = float64(random(20, 780))
-				astPosArr[i].Y = float64(random(650, 800))
-				astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
-				fmt.Println(astSpdArr[i])
-			}
-		}
+	for start == false {
+		titleSpr.Draw(win, pixel.IM.Moved(win.Bounds().Center()))
 
 		win.Update()
+		if win.Pressed(pixelgl.KeyEnter) {
+			start = true
+		}
+	}
 
-		// SPRÓBOWAĆ ZMIENIĆ SPRITE?
-		for i := 0; i < numOfAsts; i++ {
-			if astPosArr[i].Y < -20 {
-				astPosArr[i].X = float64(random(20, 780))
-				astPosArr[i].Y = float64(random(650, 800))
-				//astSpdArr[i] = float64(random(astMaxSpd-15, astMaxSpd)) / 10
-				astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
+	for !win.Closed() {
+		for gameOver == false {
+			win.Clear(colornames.Black)
+
+			if currLvl == 0 {
+				numOfAsts = 3 //1
+				astMinSpd = 5
+				astMaxSpd = 10
+			} else if currLvl == 1 {
+				numOfAsts = 5  //5
+				astMinSpd = 20 //20
+				astMaxSpd = 45 //45
+			} else if currLvl == 2 {
+				numOfAsts = 6  //6
+				astMinSpd = 35 //35
+				astMaxSpd = 60 //60
+			} else if currLvl == 3 {
+				numOfAsts = 8  //8
+				astMinSpd = 40 //40
+				astMaxSpd = 75 //75
+			} else if currLvl == 4 {
+				numOfAsts = 10 //10
+				astMinSpd = 50 //50
+				astMaxSpd = 90 //90
 			}
-		}
-		fpsCount++
-		gunTimeout--
 
-		if fpsCount == 0 {
-			fmt.Println("Level: 1")
-		}
+			if win.Pressed(pixelgl.KeyRight) {
+				if plyPos.X < 780 {
+					plyPos.X += 3
+				}
+			}
+			if win.Pressed(pixelgl.KeyLeft) {
+				if plyPos.X > 20 {
+					plyPos.X -= 3
+				}
+			}
+			if win.Pressed(pixelgl.KeyUp) {
+				if plyPos.Y < 580 {
+					plyPos.Y += 3
+				}
+			}
+			if win.Pressed(pixelgl.KeyDown) {
+				if plyPos.Y > 20 {
+					plyPos.Y -= 3
+				}
+			}
+			if win.Pressed(pixelgl.KeySpace) {
+				if gunTimeout <= 0 {
+					misLaunch = true
+					misPos.X = plyPos.X / 2
+					misPos.Y = plyPos.Y / 2
+					gunTimeout = 300 //- 120
 
-		if fpsCount == 3600 { //3600
-			fmt.Println("Level: 2")
-			currLvl++
-		}
+				}
+			}
 
-		if fpsCount == 7200 { //7200
-			fmt.Println("Level: 3")
-			currLvl++
-		}
+			if misPos.Y > 1000 {
+				misPos.X = 1000
+				misPos.Y = 1000
+				misLaunch = false
+			}
 
-		if fpsCount == 10800 { // 10800
-			fmt.Println("Level: 4")
-			currLvl++
-		}
+			var plyMat pixel.Matrix
+			var misMat pixel.Matrix
+			var astMatArr [20]pixel.Matrix
 
-		if fpsCount == 14400 { // 14400
-			fmt.Println("Level: 5")
-			currLvl++
+			for i := 0; i < numOfAsts; i++ {
+				astPosArr[i].Y -= astSpdArr[i]
+			}
+
+			plyMat = pixel.IM
+			misMat = pixel.IM
+			for i := 0; i < 20; i++ {
+				astMatArr[i] = pixel.IM
+			}
+
+			plyMat = plyMat.Moved(plyPos)
+			misMat = misMat.Moved(misPos)
+			for i := 0; i < numOfAsts; i++ {
+				astMatArr[i] = astMatArr[i].Moved(astPosArr[i])
+			}
+
+			if misLaunch == true {
+				misPos.Y += 8
+				misMat = misMat.Moved(misPos)
+			}
+
+			plySpr.Draw(win, plyMat)
+			misSpr.Draw(win, misMat)
+			for i := 0; i < numOfAsts; i++ {
+				astSprArr[i].Draw(win, astMatArr[i])
+			}
+
+			// DETEKCJA KOLIZJI
+			for i := 0; i < numOfAsts; i++ {
+				if (((astPosArr[i].X - plyPos.X) < 40) && ((astPosArr[i].X - plyPos.X) > -40)) &&
+					(((astPosArr[i].Y - plyPos.Y) < 40) && ((astPosArr[i].Y - plyPos.Y) > -40)) {
+					//time.Sleep(150000)
+					win.Clear(colornames.Red)
+					win.Update()
+					//time.Sleep(150000)
+					return
+				}
+			}
+
+			for i := 0; i < numOfAsts; i++ {
+				if (((astPosArr[i].X - misPos.X*2) < 40) && ((astPosArr[i].X - misPos.X*2) > -40)) &&
+					(((astPosArr[i].Y - misPos.Y*2) < 40) && ((astPosArr[i].Y - misPos.Y*2) > -40)) {
+					win.Clear(colornames.Yellow)
+					points += 100
+					ptsTxt.Clear()
+					fmt.Fprintln(ptsTxt, "Punkty : ", points)
+					win.Update()
+					misLaunch = false
+					misPos.X = 1000
+					misPos.Y = 1000
+					astPosArr[i].X = float64(random(20, 780))
+					astPosArr[i].Y = float64(random(650, 800))
+					astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
+					fmt.Println(astSpdArr[i])
+				}
+			}
+			if gunTimeout <= 0 {
+				loadTxt.Clear()
+				fmt.Fprintln(loadTxt, "Dzialo gotowe")
+			} else {
+				loadTxt.Clear()
+				fmt.Fprintln(loadTxt, "Zaladunek : ", gunTimeout)
+			}
+
+			ptsTxt.Draw(win, pixel.IM)
+			loadTxt.Draw(win, pixel.IM)
+			win.Update()
+
+			// SPRÓBOWAĆ ZMIENIĆ SPRITE?
+			for i := 0; i < numOfAsts; i++ {
+				if astPosArr[i].Y < -20 {
+					astPosArr[i].X = float64(random(20, 780))
+					astPosArr[i].Y = float64(random(650, 800))
+					//astSpdArr[i] = float64(random(astMaxSpd-15, astMaxSpd)) / 10
+					astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
+				}
+			}
+			fpsCount++
+			gunTimeout--
+
+			if fpsCount == 0 {
+				fmt.Println("Level: 1")
+			}
+
+			if fpsCount == 3600 { //3600
+				fmt.Println("Level: 2")
+				points += 2000
+				ptsTxt.Clear()
+				fmt.Fprintln(ptsTxt, "Punkty : ", points)
+				currLvl++
+			}
+
+			if fpsCount == 7200 { //7200
+				fmt.Println("Level: 3")
+				points += 3000
+				ptsTxt.Clear()
+				fmt.Fprintln(ptsTxt, "Punkty : ", points)
+				currLvl++
+			}
+
+			if fpsCount == 10800 { // 10800
+				fmt.Println("Level: 4")
+				points += 4000
+				ptsTxt.Clear()
+				fmt.Fprintln(ptsTxt, "Punkty : ", points)
+				currLvl++
+			}
+
+			if fpsCount == 14400 { // 14400
+				fmt.Println("Level: 5")
+				points += 5000
+				ptsTxt.Clear()
+				fmt.Fprintln(ptsTxt, "Punkty : ", points)
+				currLvl++
+			}
 		}
 	}
 }
