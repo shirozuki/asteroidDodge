@@ -58,12 +58,6 @@ func mapPngFiles() map[int]string {
 	return asteroidImgsName
 }
 
-func gameOver() {
-	fmt.Println("Game Over")
-	time.Sleep(5000)
-	return
-}
-
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Asteroids!",
@@ -85,35 +79,26 @@ func run() {
 	// Zmienne sterujące przebiegiem gry
 	var currLvl, fpsCount, numOfAsts, astMinSpd, astMaxSpd, gunTimeout, points int
 	var misLaunch, gameOver bool
-	//var xAstSpd, yAstSpd float64
-	//var xPlySpd, yPlySpd float64
-	//var chngAstSpdVec pixel.Vec
-	//var chngAstXPosVec, changeAstYPosVec pixel.Vec
 	var plyPos pixel.Vec
 	var misPos pixel.Vec
 	var astPosArr [20]pixel.Vec
 	var astSpdArr [20]float64
-	//var chngPlyXPosVec, changePlyYPosVec pixel.Vec
-	//var astImgsMap map[int]string // = mapPngFiles()
 
 	loadAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	loadTxt := text.New(pixel.V(670, 10), loadAtlas)
 	loadTxt.Color = colornames.Orange
-	fmt.Fprintln(loadTxt, "Działo : ")
+	fmt.Fprintln(loadTxt, "Dzialo : ")
 	ptsAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	ptsTxt := text.New(pixel.V(10, 10), ptsAtlas)
 	ptsTxt.Color = colornames.Yellow
 	fmt.Fprintln(ptsTxt, "Punkty : ", points)
 
 	astImgsMap := mapPngFiles()
-	//println(asteroidImgsMap[1])
-
-	// NIEPOTRZEBNE?
-	//var plyMat pixel.Matrix
-	//var astMatArr [20]pixel.Matrix
 
 	var titlePic pixel.Picture
 	var titleSpr *pixel.Sprite
+	var endPic pixel.Picture
+	var endSpr *pixel.Sprite
 
 	var plyPic pixel.Picture
 	var plySpr *pixel.Sprite
@@ -121,13 +106,18 @@ func run() {
 	var misSpr *pixel.Sprite
 	var astPicArr [20]pixel.Picture
 	var astSprArr [20]*pixel.Sprite
-	//asteroidsMatrix := [20]pixel.IM
 
 	titlePic, err = loadPicture("gfx/titleScreen.png")
 	if err != nil {
 		panic(err)
 	}
 	titleSpr = pixel.NewSprite(titlePic, titlePic.Bounds())
+
+	endPic, err = loadPicture("gfx/endScreen.png")
+	if err != nil {
+		panic(err)
+	}
+	endSpr = pixel.NewSprite(endPic, endPic.Bounds())
 
 	plyPic, err = loadPicture("gfx/plyShipCenter.png")
 	if err != nil {
@@ -165,7 +155,6 @@ func run() {
 
 	for i := 0; i < 20; i++ {
 		astSpdArr[i] = float64(random(15, 30)) / 10 // 15, 30
-		fmt.Println(astSpdArr[i])
 	}
 
 	// INTRO
@@ -174,7 +163,6 @@ func run() {
 
 	for start == false {
 		titleSpr.Draw(win, pixel.IM.Moved(win.Bounds().Center()))
-
 		win.Update()
 		if win.Pressed(pixelgl.KeyEnter) {
 			start = true
@@ -187,8 +175,8 @@ func run() {
 
 			if currLvl == 0 {
 				numOfAsts = 3 //1
-				astMinSpd = 5
-				astMaxSpd = 10
+				astMinSpd = 8
+				astMaxSpd = 14
 			} else if currLvl == 1 {
 				numOfAsts = 5  //5
 				astMinSpd = 20 //20
@@ -232,8 +220,7 @@ func run() {
 					misLaunch = true
 					misPos.X = plyPos.X / 2
 					misPos.Y = plyPos.Y / 2
-					gunTimeout = 300 //- 120
-
+					gunTimeout = 200
 				}
 			}
 
@@ -278,11 +265,11 @@ func run() {
 			for i := 0; i < numOfAsts; i++ {
 				if (((astPosArr[i].X - plyPos.X) < 40) && ((astPosArr[i].X - plyPos.X) > -40)) &&
 					(((astPosArr[i].Y - plyPos.Y) < 40) && ((astPosArr[i].Y - plyPos.Y) > -40)) {
-					//time.Sleep(150000)
+					time.Sleep(15000)
 					win.Clear(colornames.Red)
 					win.Update()
-					//time.Sleep(150000)
-					return
+					time.Sleep(15000)
+					gameOver = true
 				}
 			}
 
@@ -300,7 +287,6 @@ func run() {
 					astPosArr[i].X = float64(random(20, 780))
 					astPosArr[i].Y = float64(random(650, 800))
 					astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
-					fmt.Println(astSpdArr[i])
 				}
 			}
 			if gunTimeout <= 0 {
@@ -315,23 +301,21 @@ func run() {
 			loadTxt.Draw(win, pixel.IM)
 			win.Update()
 
-			// SPRÓBOWAĆ ZMIENIĆ SPRITE?
 			for i := 0; i < numOfAsts; i++ {
 				if astPosArr[i].Y < -20 {
 					astPosArr[i].X = float64(random(20, 780))
 					astPosArr[i].Y = float64(random(650, 800))
-					//astSpdArr[i] = float64(random(astMaxSpd-15, astMaxSpd)) / 10
 					astSpdArr[i] = float64(random(astMinSpd, astMaxSpd)) / 10
 				}
 			}
 			fpsCount++
 			gunTimeout--
 
-			if fpsCount == 0 {
+			if fpsCount == 1 {
 				fmt.Println("Level: 1")
 			}
 
-			if fpsCount == 3600 { //3600
+			if fpsCount == 3600/2 { //3600
 				fmt.Println("Level: 2")
 				points += 2000
 				ptsTxt.Clear()
@@ -339,7 +323,7 @@ func run() {
 				currLvl++
 			}
 
-			if fpsCount == 7200 { //7200
+			if fpsCount == 7200/2 { //7200
 				fmt.Println("Level: 3")
 				points += 3000
 				ptsTxt.Clear()
@@ -347,7 +331,7 @@ func run() {
 				currLvl++
 			}
 
-			if fpsCount == 10800 { // 10800
+			if fpsCount == 10800/2 { // 10800
 				fmt.Println("Level: 4")
 				points += 4000
 				ptsTxt.Clear()
@@ -355,12 +339,32 @@ func run() {
 				currLvl++
 			}
 
-			if fpsCount == 14400 { // 14400
+			if fpsCount == 14400/2 { // 14400
 				fmt.Println("Level: 5")
 				points += 5000
 				ptsTxt.Clear()
 				fmt.Fprintln(ptsTxt, "Punkty : ", points)
 				currLvl++
+			}
+		}
+
+		win.Clear(colornames.Black)
+		win.Update()
+
+		gameOverAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+		gameOverText := text.New(pixel.V(280, 350), gameOverAtlas)
+		gameOverText.Color = colornames.Yellow
+
+		for {
+			gameOverText.Clear()
+
+			fmt.Fprintln(gameOverText, "KONIEC GRY!\nPUNKTY: ", points)
+			endSpr.Draw(win, pixel.IM.Moved(win.Bounds().Center()))
+			gameOverText.Draw(win, pixel.IM.Scaled(gameOverText.Orig, 3))
+			win.Update()
+
+			if win.Pressed(pixelgl.KeyEnter) {
+				return
 			}
 		}
 	}
